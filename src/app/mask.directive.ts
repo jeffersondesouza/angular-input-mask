@@ -65,15 +65,25 @@ export class MaskDirective implements ControlValueAccessor {
 
     if (inputValueReplacedPattern.length > maskReplacedPattern.length) {
       console.log('remover último');
+      $event.target.value = $event.target.value.substr(0, $event.target.value.length - 1);
       this.registerOnChange(inputValue);
       return;
     }
 
     console.log('init');
 
+    let indexOnMask = 0;
     const inputJoined = inputValueSplited.map((value, index) => {
+
+      indexOnMask += value.length;
+      console.log('loop: ', value);
+
       if (value.length === maskSplited[index].length && parseFloat(value) <= parseFloat(maskSplited[index])) {
-        value += '_';
+        console.log('index: ', indexOnMask);
+        value += mask.charAt(indexOnMask);
+        indexOnMask++;
+      } else if (parseFloat(value) > parseFloat(maskSplited[index])) {
+        value = value.substr(0, value.length - 1);
       }
 
       return value;
@@ -83,7 +93,7 @@ export class MaskDirective implements ControlValueAccessor {
     console.log('FINAL M: ', inputJoined);
 
 
-    /// $event.target.value = inputValue + '.';
+    $event.target.value = inputJoined;
   }
 
 
