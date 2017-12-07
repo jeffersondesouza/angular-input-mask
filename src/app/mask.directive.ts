@@ -89,7 +89,9 @@ export class MaskDirective implements ControlValueAccessor {
       if (value.length === maskSplited[index].length && parseFloat(value) <= parseFloat(maskSplited[index])) {
         value += mask.charAt(indexOnMask);
         indexOnMask++;
-      } else if (parseFloat(value) > parseFloat(maskSplited[index])) {
+
+        //  && 
+      } else if (value.length > maskSplited[index].length) {
         indexOnMask--;
         const lastIndex = value.length - 1;
         const lastValue = value.charAt(lastIndex);
@@ -97,6 +99,8 @@ export class MaskDirective implements ControlValueAccessor {
 
         value += mask.charAt(indexOnMask);
         value += lastValue;
+      } else if (parseFloat(value) > parseFloat(maskSplited[index])) {
+        value = this.withLastCharRemove(value);
       }
 
       return value;
