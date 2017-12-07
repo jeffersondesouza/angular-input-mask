@@ -83,7 +83,16 @@ export class MaskDirective implements ControlValueAccessor {
         value += mask.charAt(indexOnMask);
         indexOnMask++;
       } else if (parseFloat(value) > parseFloat(maskSplited[index])) {
+        const lastIndex = value.length - 1;
+        const lastValue = value.charAt(lastIndex);
         value = value.substr(0, value.length - 1);
+
+        indexOnMask--;
+        value += mask.charAt(indexOnMask);
+        value += lastValue;
+
+        console.log('index: ', indexOnMask);
+
       }
 
       return value;
