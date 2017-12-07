@@ -26,7 +26,7 @@ export class MaskDirective implements ControlValueAccessor {
   // ([0-9]{3}).([0-9]{3}).([0-9]{3})-([0-9]{2})
 
 
-  notIputableKeysPressedReturn($event, inputValue) {
+  keyPressedIsNotIputableKey($event, inputValue) {
     if ($event.keyCode === 8 || $event.keyCode === 37 || $event.keyCode === 38 || $event.keyCode === 39 || $event.keyCode === 40 || $event.keyCode === 46) {
       this.registerOnChange(inputValue);
       return true;
@@ -34,39 +34,55 @@ export class MaskDirective implements ControlValueAccessor {
   }
 
 
+  setStringMaskValues(value) {
+    return [
+      value,
+      value.replace(/\D/g, '_'),
+      value.split(/\D/g),
+    ];
+  }
+
+  isStringGreater(inputValueReplacedPattern, maskReplacedPattern) {
+
+    console.log( maskReplacedPattern);
+
+    return inputValueReplacedPattern.length > maskReplacedPattern.length;
+  }
+
+  removeLastChar(value, inputValue) {
+    value = value.substr(0, value.length - 1);
+    this.registerOnChange(inputValue);
+  }
+
   @HostListener('keyup', ['$event'])
   onInput($event) {
 
 
+    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
+    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
 
-    //criar um a função para rettorna as tres vesrões
-    const mask: string = this.appMask;
-    const maskReplacedPattern = mask.replace(/\D/g, '_');
-    const maskSplited = mask.split(/\D/g);
-
-    //criar um a função para rettorna as tres vesrões
+    /*     //criar um a função para rettorna as tres vesrões
     const inputValue: string = $event.target.value;
     const inputValueReplacedPattern = inputValue.replace(/\D/g, '_');
     const inputValueSplited = inputValue.split(/\D/g);
-
+ */
     console.log('mask: ', mask);
     console.log('maskSplited: ', maskSplited);
     console.log('maskReplacedPattern: ', maskReplacedPattern);
-
-
     console.log('inputValue: ', inputValue);
     console.log('inputValueSplited: ', inputValueSplited);
     console.log('inputValueReplacedPattern: ', inputValueReplacedPattern);
 
     /* retuonos */
-    if (this.notIputableKeysPressedReturn($event, inputValue)) {
+    if (this.keyPressedIsNotIputableKey($event, inputValue)) {
       return;
     }
 
-    if (inputValueReplacedPattern.length > maskReplacedPattern.length) {
+    if (this.isStringGreater(inputValueReplacedPattern, maskReplacedPattern)) {
       console.log('remover último');
+      //     this.removeLastChar($event.target.value, inputValue);
+
       $event.target.value = $event.target.value.substr(0, $event.target.value.length - 1);
-      this.registerOnChange(inputValue);
       return;
     }
 
@@ -76,23 +92,18 @@ export class MaskDirective implements ControlValueAccessor {
     const inputJoined = inputValueSplited.map((value, index) => {
 
       indexOnMask += value.length;
-      console.log('loop: ', value);
 
       if (value.length === maskSplited[index].length && parseFloat(value) <= parseFloat(maskSplited[index])) {
-        console.log('index: ', indexOnMask);
         value += mask.charAt(indexOnMask);
         indexOnMask++;
       } else if (parseFloat(value) > parseFloat(maskSplited[index])) {
+        indexOnMask--;
         const lastIndex = value.length - 1;
         const lastValue = value.charAt(lastIndex);
         value = value.substr(0, value.length - 1);
 
-        indexOnMask--;
         value += mask.charAt(indexOnMask);
         value += lastValue;
-
-        console.log('index: ', indexOnMask);
-
       }
 
       return value;
