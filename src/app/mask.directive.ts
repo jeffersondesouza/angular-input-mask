@@ -43,29 +43,25 @@ export class MaskDirective implements ControlValueAccessor {
   }
 
   isStringGreater(inputValueReplacedPattern, maskReplacedPattern) {
-
-    console.log( maskReplacedPattern);
-
+    console.log(maskReplacedPattern);
     return inputValueReplacedPattern.length > maskReplacedPattern.length;
   }
 
-  removeLastChar(value, inputValue) {
-    value = value.substr(0, value.length - 1);
-    this.registerOnChange(inputValue);
+  withLastCharRemove(value) {
+    return value.substr(0, value.length - 1);
+  }
+
+  lastValueOf(value) {
+    const lastIndex = value.length - 1;
+    return value.charAt(lastIndex);
   }
 
   @HostListener('keyup', ['$event'])
   onInput($event) {
 
-
     const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
     const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
 
-    /*     //criar um a função para rettorna as tres vesrões
-    const inputValue: string = $event.target.value;
-    const inputValueReplacedPattern = inputValue.replace(/\D/g, '_');
-    const inputValueSplited = inputValue.split(/\D/g);
- */
     console.log('mask: ', mask);
     console.log('maskSplited: ', maskSplited);
     console.log('maskReplacedPattern: ', maskReplacedPattern);
@@ -79,14 +75,11 @@ export class MaskDirective implements ControlValueAccessor {
     }
 
     if (this.isStringGreater(inputValueReplacedPattern, maskReplacedPattern)) {
-      console.log('remover último');
-      //     this.removeLastChar($event.target.value, inputValue);
-
-      $event.target.value = $event.target.value.substr(0, $event.target.value.length - 1);
+      $event.target.value = this.withLastCharRemove($event.target.value);
+      this.registerOnChange(inputValue);
       return;
     }
 
-    console.log('init');
 
     let indexOnMask = 0;
     const inputJoined = inputValueSplited.map((value, index) => {
@@ -108,10 +101,6 @@ export class MaskDirective implements ControlValueAccessor {
 
       return value;
     }).join('');
-
-
-    console.log('FINAL M: ', inputJoined);
-
 
     $event.target.value = inputJoined;
   }
