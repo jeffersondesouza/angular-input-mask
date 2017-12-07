@@ -47,13 +47,13 @@ export class MaskDirective implements ControlValueAccessor {
     return inputValueReplacedPattern.length > maskReplacedPattern.length;
   }
 
-  withLastCharRemove(value) {
+  removeLastNumber(value) {
     return value.substr(0, value.length - 1);
   }
 
   lastValueOf(value) {
     const lastIndex = value.length - 1;
-    return value.charAt(lastIndex);
+    return parseFloat(value.charAt(lastIndex));
   }
 
   @HostListener('keyup', ['$event'])
@@ -75,36 +75,43 @@ export class MaskDirective implements ControlValueAccessor {
     }
 
     if (this.isStringGreater(inputValueReplacedPattern, maskReplacedPattern)) {
-      $event.target.value = this.withLastCharRemove($event.target.value);
+      $event.target.value = this.removeLastNumber($event.target.value);
       this.registerOnChange(inputValue);
       return;
     }
 
 
     let indexOnMask = 0;
-    const inputJoined = inputValueSplited.map((value, index) => {
+    const inputJoined = inputValueSplited.map((inputStringGroup, index) => {
 
-      indexOnMask += value.length;
+      indexOnMask += inputStringGroup.length;
 
-      if (value.length === maskSplited[index].length && parseFloat(value) <= parseFloat(maskSplited[index])) {
-        value += mask.charAt(indexOnMask);
-        indexOnMask++;
 
-        //  && 
-      } else if (value.length > maskSplited[index].length) {
-        indexOnMask--;
-        const lastIndex = value.length - 1;
-        const lastValue = value.charAt(lastIndex);
-        value = value.substr(0, value.length - 1);
-
-        value += mask.charAt(indexOnMask);
-        value += lastValue;
-      } else if (parseFloat(value) > parseFloat(maskSplited[index])) {
-        value = this.withLastCharRemove(value);
+      if (this.lastValueOf(inputStringGroup) > maskSplited[index].split('').map(v => parseFloat(v))[inputStringGroup.length - 1]) {
+        inputStringGroup = this.removeLastNumber(inputStringGroup);
       }
 
-      return value;
+      if (inputStringGroup.length === maskSplited[index].length && parseFloat(inputStringGroup) <= parseFloat(maskSplited[index])) {
+        inputStringGroup += mask.charAt(indexOnMask);
+        indexOnMask++;
+      } else if (inputStringGroup.length > maskSplited[index].length) {
+        indexOnMask--;
+        const lastIndex = inputStringGroup.length - 1;
+        const lastValue = inputStringGroup.charAt(lastIndex);
+        inputStringGroup = inputStringGroup.substr(0, inputStringGroup.length - 1);
+
+        inputStringGroup += mask.charAt(indexOnMask);
+        inputStringGroup += lastValue;
+      } else if (parseFloat(inputStringGroup) > parseFloat(maskSplited[index])) {
+        inputStringGroup = this.removeLastNumber(inputStringGroup);
+      }
+
+
+
+      return inputStringGroup;
     }).join('');
+
+
 
     $event.target.value = inputJoined;
   }
