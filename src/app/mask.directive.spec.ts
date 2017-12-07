@@ -58,6 +58,8 @@ describe('MaskDirective', () => {
   });
 
 
+
+
   it('should set second part of string link cpf when delete the point', () => {
     const directive = new MaskDirective();
     directive.appMask = '999.999.999-99';

@@ -2,6 +2,7 @@ import { Directive, Input } from '@angular/core';
 import { HostListener } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { ValueTransformer } from '@angular/compiler/src/util';
+import { findLast } from '@angular/compiler/src/directive_resolver';
 
 @Directive({
   selector: '[appMask]'
@@ -26,41 +27,25 @@ export class MaskDirective implements ControlValueAccessor {
   // ([0-9]{3}).([0-9]{3}).([0-9]{3})-([0-9]{2})
 
 
-  keyPressedIsNotIputableKey($event, inputValue) {
-    if ($event.keyCode === 8 || $event.keyCode === 37 || $event.keyCode === 38 || $event.keyCode === 39 || $event.keyCode === 40 || $event.keyCode === 46) {
-      this.registerOnChange(inputValue);
+  deleteOrBackSpacePressed($event) {
+    if ($event.keyCode === 8 || $event.keyCode === 46) {
+      return true;
+    }
+  }
+
+  arrowsPressed($event, inputValue) {
+    if ($event.keyCode === 37 || $event.keyCode === 38 || $event.keyCode === 39 || $event.keyCode === 40) {
       return true;
     }
   }
 
 
-  setStringMaskValues(value) {
-    return [
-      value,
-      value.replace(/\D/g, '_'),
-      value.split(/\D/g),
-    ];
-  }
-
-  isStringGreater(inputValueReplacedPattern, maskReplacedPattern) {
-    console.log(maskReplacedPattern);
-    return inputValueReplacedPattern.length > maskReplacedPattern.length;
-  }
-
-  removeLastNumber(value) {
-    return value.substr(0, value.length - 1);
-  }
-
-  lastValueOf(value) {
-    const lastIndex = value.length - 1;
-    return parseFloat(value.charAt(lastIndex));
-  }
-
-  @HostListener('keyup', ['$event'])
-  onInput($event) {
-
-    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
-    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
+  printValues(mask,
+    maskSplited,
+    maskReplacedPattern,
+    inputValue,
+    inputValueSplited,
+    inputValueReplacedPattern) {
 
     console.log('mask: ', mask);
     console.log('maskSplited: ', maskSplited);
@@ -68,62 +53,137 @@ export class MaskDirective implements ControlValueAccessor {
     console.log('inputValue: ', inputValue);
     console.log('inputValueSplited: ', inputValueSplited);
     console.log('inputValueReplacedPattern: ', inputValueReplacedPattern);
+  }
 
-    /* retuonos */
-    if (this.keyPressedIsNotIputableKey($event, inputValue)) {
+
+  setStringMaskValues(value) {
+    return [
+      value,
+      value.replace(/\D/g, '_'),
+      value.split(/\D/g).filter(v => v),
+    ];
+  }
+
+
+  resetInput(inputValueSplited, maskSplited) {
+    return inputValueSplited.map((actualGroup, index, arr) => {
+      const nextGroup: string = inputValueSplited[index + 1];
+      if (nextGroup) {
+        while (maskSplited[index].length > actualGroup.length) {
+          actualGroup += arr[index + 1].charAt(0);
+          arr[index + 1] = arr[index + 1].substr(1);
+        }
+      }
+      return actualGroup;
+    });
+  }
+
+  inpuValueHasGreaterSizeThenMask(data1, data2) {
+    return data1.length > data2.length;
+  }
+
+  removeLastNumber(value) {
+    return value.substr(0, value.length - 1);
+  }
+
+  lastValueOf(value, asString?) {
+    const lastIndex = value.length - 1;
+    return asString ? value.charAt(lastIndex) : parseFloat(value.charAt(lastIndex));
+  }
+
+
+  asArrayNumbers(maskValue) {
+    return maskValue.split('').map(v => parseFloat(v));
+  }
+
+  isActualInputGreaterThenMaskInput(inputGroup, maskValue) {
+    const actualIndex = inputGroup.length - 1;
+    return this.lastValueOf(inputGroup) > this.asArrayNumbers(maskValue)[actualIndex];
+  }
+
+
+  hasSameSize(inputGroup, maskSplited) {
+    return inputGroup.length === maskSplited.length;
+  }
+
+
+  isNotANumber(value) {
+    return /\D/.test(this.lastValueOf(value, true));
+  }
+
+  isGreaterThen(value1, value2) {
+    return parseFloat(value1) > parseFloat(value2);
+  }
+
+
+  parseInputToMaskPattern() {
+
+  }
+
+  @HostListener('keyup', ['$event'])
+  onInput($event) {
+
+    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
+    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
+    let inputValueSplitedValue;
+    let isDeletingValue = false;
+    let returValue;
+
+    if (this.arrowsPressed($event, inputValue)) {
+      this.registerOnChange(inputValue);
       return;
     }
 
-    if (this.isStringGreater(inputValueReplacedPattern, maskReplacedPattern)) {
+    if (this.deleteOrBackSpacePressed($event)) {
+      inputValueSplitedValue = this.resetInput(inputValueSplited, maskSplited);
+      isDeletingValue = true;
+    } else {
+      inputValueSplitedValue = inputValueSplited;
+    }
+
+    if (this.inpuValueHasGreaterSizeThenMask(inputValueReplacedPattern, maskReplacedPattern)) {
       $event.target.value = this.removeLastNumber($event.target.value);
       this.registerOnChange(inputValue);
       return;
     }
 
-
     let indexOnMask = 0;
-    const inputJoined = inputValueSplited.map((inputStringGroup, index) => {
 
-      indexOnMask += inputStringGroup.length;
-
-
-      if (this.lastValueOf(inputStringGroup) > maskSplited[index].split('').map(v => parseFloat(v))[inputStringGroup.length - 1]) {
-        inputStringGroup = this.removeLastNumber(inputStringGroup);
-      }
-
-      if (inputStringGroup.length === maskSplited[index].length && parseFloat(inputStringGroup) <= parseFloat(maskSplited[index])) {
-        inputStringGroup += mask.charAt(indexOnMask);
+    returValue = inputValueSplitedValue.map((inputGroup, index) => {
+      indexOnMask += inputGroup.length;
+      if (this.hasSameSize(inputGroup, maskSplited[index])) {
+        inputGroup += mask.charAt(indexOnMask);
         indexOnMask++;
-      } else if (inputStringGroup.length > maskSplited[index].length) {
-        indexOnMask--;
-        const lastIndex = inputStringGroup.length - 1;
-        const lastValue = inputStringGroup.charAt(lastIndex);
-        inputStringGroup = inputStringGroup.substr(0, inputStringGroup.length - 1);
 
-        inputStringGroup += mask.charAt(indexOnMask);
-        inputStringGroup += lastValue;
-      } else if (parseFloat(inputStringGroup) > parseFloat(maskSplited[index])) {
-        inputStringGroup = this.removeLastNumber(inputStringGroup);
+      } else if (this.isGreaterThen(inputGroup.length, maskSplited[index].length)) {
+        indexOnMask--;
+        const lastIndex = inputGroup.length - 1;
+        const lastValue = inputGroup.charAt(lastIndex);
+        inputGroup = inputGroup.substr(0, inputGroup.length - 1);
+
+        inputGroup += mask.charAt(indexOnMask);
+        inputGroup += lastValue;
+      } else if (this.isGreaterThen(inputGroup, maskSplited[index])) {
+        inputGroup = this.removeLastNumber(inputGroup);
       }
 
+      if (this.isActualInputGreaterThenMaskInput(inputGroup, maskSplited[index])) {
+        inputGroup = this.removeLastNumber(inputGroup);
+      }
 
-
-      return inputStringGroup;
+      return inputGroup;
     }).join('');
 
-
-
-    $event.target.value = inputJoined;
+    if (isDeletingValue && this.isNotANumber(this.lastValueOf(returValue, true))) {
+      returValue = this.removeLastNumber(returValue);
+    }
+    $event.target.value = returValue;
   }
-
-
-
 
   @HostListener('blur', ['$event'])
   onBlur($event) {
     const inputValue = $event.target.value;
     if (inputValue) {
-      console.log(inputValue);
     }
 
   }
