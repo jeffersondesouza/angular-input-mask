@@ -9,6 +9,9 @@ import { findLast } from '@angular/compiler/src/directive_resolver';
 })
 export class MaskDirective implements ControlValueAccessor {
 
+  isUserDeletingValue = false;
+
+
   constructor() { }
 
   @Input() appMask: string;
@@ -27,13 +30,13 @@ export class MaskDirective implements ControlValueAccessor {
   // ([0-9]{3}).([0-9]{3}).([0-9]{3})-([0-9]{2})
 
 
-  deleteOrBackSpacePressed($event) {
+  onDeleteOrBackSpacePressed($event) {
     if ($event.keyCode === 8 || $event.keyCode === 46) {
       return true;
     }
   }
 
-  arrowsPressed($event, inputValue) {
+  onArrowsPressed($event) {
     if ($event.keyCode === 37 || $event.keyCode === 38 || $event.keyCode === 39 || $event.keyCode === 40) {
       return true;
     }
@@ -65,18 +68,37 @@ export class MaskDirective implements ControlValueAccessor {
   }
 
 
-  resetInput(inputValueSplited, maskSplited) {
-    return inputValueSplited.map((actualGroup, index, arr) => {
-      const nextGroup: string = inputValueSplited[index + 1];
-      if (nextGroup) {
-        while (maskSplited[index].length > actualGroup.length) {
-          actualGroup += arr[index + 1].charAt(0);
-          arr[index + 1] = arr[index + 1].substr(1);
-        }
+  exchangeValuesForwardToBack(inputValueSplited, maskSplited, actualGroup, index, arr) {
+    const nextGroup: string = inputValueSplited[index + 1];
+    if (nextGroup) {
+      while (maskSplited[index].length > actualGroup.length) {
+        actualGroup += arr[index + 1].charAt(0);
+        arr[index + 1] = arr[index + 1].substr(1);
       }
-      return actualGroup;
+    }
+    return actualGroup;
+  }
+
+  resetInputOnDeleting(inputValueSplited, maskSplited) {
+    return inputValueSplited.map((actualGroup, index, arr) => {
+      return this.exchangeValuesForwardToBack(inputValueSplited, maskSplited, actualGroup, index, arr);
     });
   }
+
+
+  /*   resetInputOnDeleting(inputValueSplited, maskSplited) {
+      return inputValueSplited.map((actualGroup, index, arr) => {
+        const nextGroup: string = inputValueSplited[index + 1];
+        if (nextGroup) {
+          while (maskSplited[index].length > actualGroup.length) {
+            actualGroup += arr[index + 1].charAt(0);
+            arr[index + 1] = arr[index + 1].substr(1);
+          }
+        }
+        return actualGroup;
+      });
+    }
+   */
 
   inpuValueHasGreaterSizeThenMask(data1, data2) {
     return data1.length > data2.length;
@@ -120,24 +142,36 @@ export class MaskDirective implements ControlValueAccessor {
 
   }
 
-  @HostListener('keyup', ['$event'])
+  @HostListener('keydown', ['$event'])
+  onKeyup($event) {
+    if (this.onDeleteOrBackSpacePressed($event)) {
+      this.isUserDeletingValue = true;
+    }
+  }
+
+  @HostListener('input', ['$event'])
   onInput($event) {
+
+    const el: HTMLInputElement = ($event.target as HTMLInputElement);
+    const position: number = el.selectionStart;
+
+    console.log(el, position);
 
     const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
     const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
+
     let inputValueSplitedValue;
-    let isDeletingValue = false;
     let returValue;
 
-    if (this.arrowsPressed($event, inputValue)) {
+    if (this.onArrowsPressed($event)) {
       this.registerOnChange(inputValue);
       return;
     }
 
-    if (this.deleteOrBackSpacePressed($event)) {
-      inputValueSplitedValue = this.resetInput(inputValueSplited, maskSplited);
-      isDeletingValue = true;
+    if (this.isUserDeletingValue) {
+      inputValueSplitedValue = this.resetInputOnDeleting(inputValueSplited, maskSplited);
     } else {
+      this.isUserDeletingValue = false;
       inputValueSplitedValue = inputValueSplited;
     }
 
@@ -174,9 +208,10 @@ export class MaskDirective implements ControlValueAccessor {
       return inputGroup;
     }).join('');
 
-    if (isDeletingValue && this.isNotANumber(this.lastValueOf(returValue, true))) {
+    if (this.isUserDeletingValue && this.isNotANumber(this.lastValueOf(returValue, true))) {
       returValue = this.removeLastNumber(returValue);
     }
+
     $event.target.value = returValue;
   }
 
@@ -187,5 +222,6 @@ export class MaskDirective implements ControlValueAccessor {
     }
 
   }
+
 
 }
