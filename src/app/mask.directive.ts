@@ -1,23 +1,135 @@
-import { Directive, Input } from '@angular/core';
-import { HostListener } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
-import { ValueTransformer } from '@angular/compiler/src/util';
-import { findLast } from '@angular/compiler/src/directive_resolver';
+import { Directive, Input, HostListener, Renderer2, ElementRef, forwardRef } from '@angular/core';
+
+
 
 @Directive({
-  selector: '[appMask]'
+  selector: '[appMask]',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => MaskDirective),
+      multi: true
+    },
+  ],
 })
 export class MaskDirective implements ControlValueAccessor {
 
   isUserDeletingValue = false;
+  cursorPosition: number;
 
-
-  constructor() { }
+  constructor(
+    private _elementRef: ElementRef,
+    private _renderer: Renderer2,
+  ) { }
 
   @Input() appMask: string;
 
 
+
+  @HostListener('keydown', ['$event'])
+  onKeydown($event) {
+    if (this.onDeleteOrBackSpacePressed($event)) {
+      const el = ($event.target as HTMLInputElement);
+      const cursorPosition = el.selectionStart;
+
+
+      console.log('delete: ', cursorPosition);
+
+
+      this.isUserDeletingValue = true;
+    }
+  }
+
+  @HostListener('input', ['$event'])
+  onInput($event) {
+
+    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
+    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
+
+    const el: HTMLInputElement = ($event.target as HTMLInputElement);
+    const cursorPosition: number = el.selectionStart;
+
+    // console.log(el, cursorPosition);
+
+
+    let inputValueSplitedValue;
+
+    if (this.onArrowsPressed($event)) {
+      return;
+    }
+
+    if (this.isUserDeletingValue) {
+      inputValueSplitedValue = this.resetInputOnDeleting(inputValueSplited, maskSplited);
+      console.log(el.selectionStart, el.selectionEnd)
+    } else {
+      this.isUserDeletingValue = false;
+      inputValueSplitedValue = inputValueSplited;
+    }
+
+    if (this.inpuValueHasGreaterSizeThenMask(inputValueReplacedPattern, maskReplacedPattern)) {
+      el.value = this.removeLastNumber($event.target.value);
+      return;
+    }
+
+
+
+    el.value = this.apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask);
+    if (this.isUserDeletingValue) {
+      this.isUserDeletingValue = false;
+      el.selectionStart = el.selectionEnd = cursorPosition;
+    }
+
+  }
+
+
+  apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask) {
+    let indexOnMask = 0;
+    const returValue = inputValueSplitedValue.map((inputGroup, index) => {
+      indexOnMask += inputGroup.length;
+      if (this.hasSameSize(inputGroup, maskSplited[index])) {
+        inputGroup += mask.charAt(indexOnMask);
+        indexOnMask++;
+
+      } else if (this.isGreaterThen(inputGroup.length, maskSplited[index].length)) {
+        indexOnMask--;
+        const lastIndex = inputGroup.length - 1;
+        const lastValue = inputGroup.charAt(lastIndex);
+        inputGroup = inputGroup.substr(0, inputGroup.length - 1);
+
+        inputGroup += mask.charAt(indexOnMask);
+        inputGroup += lastValue;
+      } else if (this.isGreaterThen(inputGroup, maskSplited[index])) {
+        inputGroup = this.removeLastNumber(inputGroup);
+      }
+
+      if (this.isActualInputGreaterThenMaskInput(inputGroup, maskSplited[index])) {
+        inputGroup = this.removeLastNumber(inputGroup);
+      }
+
+      return inputGroup;
+    }).join('');
+
+    if (this.isUserDeletingValue && this.isNotANumber(this.lastValueOf(returValue, true))) {
+      return this.removeLastNumber(returValue);
+    }
+
+    return returValue;
+
+  }
+
+  @HostListener('blur', ['$event'])
+  onBlur($event) {
+    const inputValue = $event.target.value;
+    if (inputValue) {
+    }
+
+  }
+
+
+
   writeValue(value: any): void {
+    console.log(value);
   }
 
   registerOnChange(fn) {
@@ -142,86 +254,6 @@ export class MaskDirective implements ControlValueAccessor {
 
   }
 
-  @HostListener('keydown', ['$event'])
-  onKeyup($event) {
-    if (this.onDeleteOrBackSpacePressed($event)) {
-      this.isUserDeletingValue = true;
-    }
-  }
-
-  @HostListener('input', ['$event'])
-  onInput($event) {
-
-    const el: HTMLInputElement = ($event.target as HTMLInputElement);
-    const position: number = el.selectionStart;
-
-    console.log(el, position);
-
-    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
-    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
-
-    let inputValueSplitedValue;
-    let returValue;
-
-    if (this.onArrowsPressed($event)) {
-      this.registerOnChange(inputValue);
-      return;
-    }
-
-    if (this.isUserDeletingValue) {
-      inputValueSplitedValue = this.resetInputOnDeleting(inputValueSplited, maskSplited);
-    } else {
-      this.isUserDeletingValue = false;
-      inputValueSplitedValue = inputValueSplited;
-    }
-
-    if (this.inpuValueHasGreaterSizeThenMask(inputValueReplacedPattern, maskReplacedPattern)) {
-      $event.target.value = this.removeLastNumber($event.target.value);
-      this.registerOnChange(inputValue);
-      return;
-    }
-
-    let indexOnMask = 0;
-
-    returValue = inputValueSplitedValue.map((inputGroup, index) => {
-      indexOnMask += inputGroup.length;
-      if (this.hasSameSize(inputGroup, maskSplited[index])) {
-        inputGroup += mask.charAt(indexOnMask);
-        indexOnMask++;
-
-      } else if (this.isGreaterThen(inputGroup.length, maskSplited[index].length)) {
-        indexOnMask--;
-        const lastIndex = inputGroup.length - 1;
-        const lastValue = inputGroup.charAt(lastIndex);
-        inputGroup = inputGroup.substr(0, inputGroup.length - 1);
-
-        inputGroup += mask.charAt(indexOnMask);
-        inputGroup += lastValue;
-      } else if (this.isGreaterThen(inputGroup, maskSplited[index])) {
-        inputGroup = this.removeLastNumber(inputGroup);
-      }
-
-      if (this.isActualInputGreaterThenMaskInput(inputGroup, maskSplited[index])) {
-        inputGroup = this.removeLastNumber(inputGroup);
-      }
-
-      return inputGroup;
-    }).join('');
-
-    if (this.isUserDeletingValue && this.isNotANumber(this.lastValueOf(returValue, true))) {
-      returValue = this.removeLastNumber(returValue);
-    }
-
-    $event.target.value = returValue;
-  }
-
-  @HostListener('blur', ['$event'])
-  onBlur($event) {
-    const inputValue = $event.target.value;
-    if (inputValue) {
-    }
-
-  }
 
 
 }

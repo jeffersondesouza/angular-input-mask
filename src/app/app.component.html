@@ -9,14 +9,20 @@
     <label for="">CPF- 999.999.999-99</label>
     <br>
     <input appMask="999.999.999-99"
-      #v1 type="text" (keyup)="0"> {{ v1.value }}
+      #v1a type="text" (keyup)="0" value="123.456.789-01"> {{ v1a.value }}
   </div>
   <div style="margin:1rem">
+    <label for="">CPF- 999.999.999-99</label>
+    <br>
+    <input appMask="999.999.999-99"
+      #v1 type="text" (keyup)="0"> {{ v1.value }}
+  </div>
+<!--   <div style="margin:1rem">
     <label for="">hora - 06:mm</label>
     <br>
     <input appMask 
       #v2 type="text" (keyup)="0"> {{ v2.value }}
-  </div>
+  </div> -->
   <div style="margin:1rem">
     <label for="">Hora - 23:59</label>
     <br>
@@ -29,10 +35,10 @@
     <input appMask="99/99/9999"
       #v4 type="text" (keyup)="0"> {{ v4.value }}
   </div>
-  <div style="margin:1rem">
+<!--   <div style="margin:1rem">
     <label for="">ANY</label>
     <br>
     <input appMask
       #v5 type="text" (keyup)="0"> {{ v5.value }}
-  </div>
+  </div> -->
 </section>
