@@ -200,6 +200,8 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
   }
 
   balanceInputBySmallersSizeValues(inputValueSplited, maskSplited) {
+    console.log(inputValueSplited)
+
     return inputValueSplited.map((v, i, arr) => {
       if (arr[i + 1] && (arr[i].length < arr[i + 1].length || arr[i].length < maskSplited[i].length)) {
         v += arr[i + 1].charAt(0);
