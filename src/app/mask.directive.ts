@@ -186,21 +186,29 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
   }
 
 
-  checkInputValuesSize(inputValueSplited, maskSplited) {
+  balanceInputByGreaterSizeValues(inputValueSplited, maskSplited) {
 
     return inputValueSplited.map((v, i, arr) => {
 
       if (arr[i] && maskSplited[i] && arr[i].length > maskSplited[i].length) {
-        if (inputValueSplited[i + 1]) {
-          arr[i + 1] = v.substr(maskSplited[i].length) + arr[i + 1];
-        }
+        arr[i + 1] = v.substr(maskSplited[i].length) + arr[i + 1];
         v = v.substr(0, maskSplited[i].length);
       }
       return v;
     });
   }
 
+  balanceInputBySmallersSizeValues(inputValueSplited, maskSplited) {
+    console.log(inputValueSplited, maskSplited);
 
+    return inputValueSplited.map((v, i, arr) => {
+      if (arr[i + 1] && arr[i].length < maskSplited[i].length) {
+        v += arr[i + 1].charAt(0);
+        arr[i + 1] = arr[i + 1].substr(1, arr[i + 1].length);
+      }
+      return v;
+    });
+  }
 
 
   isNumeric(value) {
@@ -219,12 +227,12 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
   onInput($event) {
 
     const el: HTMLInputElement = ($event.target as HTMLInputElement);
+    let inputValueSplitedValue;
     const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
     const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
 
     this.cursorPosition = el.selectionStart;
 
-    let inputValueSplitedValue;
 
     if (this.onArrowsPressed($event)) {
       return;
@@ -239,7 +247,12 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     if (this.isUserDeletingValue) {
       inputValueSplitedValue = this.resetInputOnDeleting(inputValueSplited, maskSplited);
     } else {
-      inputValueSplitedValue = this.checkInputValuesSize(inputValueSplited, maskSplited);
+
+      if (inputValueSplited.some((group, index) => group.length > maskSplited[index].length)) {
+        inputValueSplitedValue = this.balanceInputByGreaterSizeValues(inputValueSplited, maskSplited);
+      } else {
+        inputValueSplitedValue = this.balanceInputBySmallersSizeValues(inputValueSplited, maskSplited);
+      }
     }
 
     el.value = this.apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask);
