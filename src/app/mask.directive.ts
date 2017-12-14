@@ -187,11 +187,10 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
 
 
   balanceInputByGreaterSizeValues(inputValueSplited, maskSplited) {
-
+    console.log(inputValueSplited)
     return inputValueSplited.map((v, i, arr) => {
-      console.log(v);
 
-      if (maskSplited[i] && arr[i].length > maskSplited[i].length) {
+      if (arr[i] && maskSplited[i] && arr[i].length > maskSplited[i].length) {
         arr[i + 1] = v.substr(maskSplited[i].length) + arr[i + 1];
         v = v.substr(0, maskSplited[i].length);
       }
@@ -201,9 +200,8 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
   }
 
   balanceInputBySmallersSizeValues(inputValueSplited, maskSplited) {
-
     return inputValueSplited.map((v, i, arr) => {
-      while (arr[i + 1] && (arr[i].length < arr[i + 1].length || arr[i].length < maskSplited[i].length)) {
+      if (arr[i + 1] && (arr[i].length < arr[i + 1].length || arr[i].length < maskSplited[i].length)) {
         v += arr[i + 1].charAt(0);
         arr[i + 1] = arr[i + 1].substr(1, arr[i + 1].length);
       }
