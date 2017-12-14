@@ -18,6 +18,7 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
 
   isUserDeletingValue = false;
   elementValue;
+  cursorPosition: number;
 
 
   @Input() appMask: string;
@@ -27,13 +28,9 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     private _renderer: Renderer2,
   ) { }
 
-
-
   public ngOnInit(): void {
     this.elementValue = this._elementRef.nativeElement.value;
   }
-
-
 
   writeValue(value: any) {
     if (value !== undefined) {
@@ -51,14 +48,13 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
   @HostListener('keydown', ['$event'])
   onKeydown($event) {
     const el = ($event.target as HTMLInputElement);
-    const cursorPosition = el.selectionStart;
+    this.cursorPosition = el.selectionStart;
 
     if (this.onDeleteOrBackSpacePressed($event)) {
+      console.log(this.elementValue.charAt(this.cursorPosition));
       this.isUserDeletingValue = true;
     }
   }
-
-
 
   apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask) {
     let indexOnMask = 0;
@@ -130,6 +126,7 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
 
   exchangeValuesForwardToBack(inputValueSplited, maskSplited, actualGroup, index, arr) {
     const nextGroup: string = inputValueSplited[index + 1];
+
     if (nextGroup) {
       while (maskSplited[index].length > actualGroup.length) {
         actualGroup += arr[index + 1].charAt(0);
@@ -203,14 +200,29 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     });
   }
 
+
+
+
+  isNumeric(value) {
+    return /\d/.test(value);
+  }
+
+  inputedKeyValueIsNotNumeric(el) {
+    return !this.isUserDeletingValue && !this.isNumeric(el.value.charAt(this.cursorPosition - 1));
+  }
+
+  isDeletingMaskSymbol() {
+    return this.isUserDeletingValue && !this.isNumeric(this.elementValue.charAt(this.cursorPosition));
+  }
+
   @HostListener('input', ['$event'])
   onInput($event) {
 
+    const el: HTMLInputElement = ($event.target as HTMLInputElement);
     const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
     const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
 
-    const el: HTMLInputElement = ($event.target as HTMLInputElement);
-    const cursorPosition: number = el.selectionStart;
+    this.cursorPosition = el.selectionStart;
 
     let inputValueSplitedValue;
 
@@ -218,8 +230,9 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
       return;
     }
 
-    if (!this.isUserDeletingValue && !/\d/.test(el.value.charAt(cursorPosition - 1))) {
+    if (this.inputedKeyValueIsNotNumeric(el) || this.isDeletingMaskSymbol()) {
       el.value = (this.elementValue) ? this.elementValue : '';
+      el.selectionStart = el.selectionEnd = this.cursorPosition;
       return;
     }
 
@@ -236,12 +249,11 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
       this.isUserDeletingValue = false;
     }
 
-    if (/\d/.test(el.value.charAt(cursorPosition))) {
-      el.selectionStart = el.selectionEnd = cursorPosition;
+    if (this.isNumeric(el.value.charAt(this.cursorPosition))) {
+      el.selectionStart = el.selectionEnd = this.cursorPosition;
     } else {
-      el.selectionStart = el.selectionEnd = cursorPosition + 1;
+      el.selectionStart = el.selectionEnd = this.cursorPosition + 1;
     }
   }
-
 
 }
