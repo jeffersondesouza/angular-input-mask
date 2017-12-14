@@ -52,7 +52,7 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
 
     if (this.onDeleteOrBackSpacePressed($event)) {
       console.log(this.elementValue.charAt(this.cursorPosition));
-      this.isUserDeletingValue = true;
+      this.isUserDeletingValue = (this.elementValue) ? true : false;
     }
   }
 
@@ -189,20 +189,21 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
   balanceInputByGreaterSizeValues(inputValueSplited, maskSplited) {
 
     return inputValueSplited.map((v, i, arr) => {
+      console.log(v);
 
-      if (arr[i] && maskSplited[i] && arr[i].length > maskSplited[i].length) {
+      if (maskSplited[i] && arr[i].length > maskSplited[i].length) {
         arr[i + 1] = v.substr(maskSplited[i].length) + arr[i + 1];
         v = v.substr(0, maskSplited[i].length);
       }
+
       return v;
     });
   }
 
   balanceInputBySmallersSizeValues(inputValueSplited, maskSplited) {
-    console.log(inputValueSplited, maskSplited);
 
     return inputValueSplited.map((v, i, arr) => {
-      if (arr[i + 1] && arr[i].length < maskSplited[i].length) {
+      while (arr[i + 1] && (arr[i].length < arr[i + 1].length || arr[i].length < maskSplited[i].length)) {
         v += arr[i + 1].charAt(0);
         arr[i + 1] = arr[i + 1].substr(1, arr[i + 1].length);
       }
