@@ -1,7 +1,5 @@
-
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { Directive, Input, OnInit, HostListener, Renderer2, ElementRef, forwardRef } from '@angular/core';
-
 
 
 @Directive({
@@ -51,7 +49,6 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     this.cursorPosition = el.selectionStart;
 
     if (this.onDeleteOrBackSpacePressed($event)) {
-      console.log(this.elementValue.charAt(this.cursorPosition));
       this.isUserDeletingValue = (this.elementValue) ? true : false;
     }
   }
@@ -185,7 +182,6 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     return parseFloat(value1) > parseFloat(value2);
   }
 
-
   balanceInputByGreaterSizeValues(inputValueSplited, maskSplited) {
     return inputValueSplited.map((v, i) => {
 
@@ -193,14 +189,15 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
         inputValueSplited[i + 1] = v.substr(maskSplited[i].length) + inputValueSplited[i + 1];
         v = v.substr(0, maskSplited[i].length);
       }
-
       return v;
     });
   }
 
   balanceInputBySmallersSizeValues(inputValueSplited, maskSplited) {
     return inputValueSplited.map((v, i, arr) => {
-      while (inputValueSplited[i + 1] && (inputValueSplited[i].length < inputValueSplited[i + 1].length || inputValueSplited[i].length < maskSplited[i].length)) {
+      while (inputValueSplited[i + 1]
+        && (inputValueSplited[i].length < inputValueSplited[i + 1].length || inputValueSplited[i].length < maskSplited[i].length)) {
+
         inputValueSplited[i] += inputValueSplited[i + 1].charAt(0);
         inputValueSplited[i + 1] = inputValueSplited[i + 1].substr(1, inputValueSplited[i + 1].length);
       }
