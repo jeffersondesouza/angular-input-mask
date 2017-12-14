@@ -1,5 +1,6 @@
+
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
-import { Directive, Input, HostListener, Renderer2, ElementRef, forwardRef } from '@angular/core';
+import { Directive, Input, OnInit, HostListener, Renderer2, ElementRef, forwardRef } from '@angular/core';
 
 
 
@@ -10,83 +11,61 @@ import { Directive, Input, HostListener, Renderer2, ElementRef, forwardRef } fro
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => MaskDirective),
       multi: true
-    },
-  ],
+    }
+  ]
 })
-export class MaskDirective implements ControlValueAccessor {
+export class MaskDirective implements OnInit, ControlValueAccessor {
 
   isUserDeletingValue = false;
-  cursorPosition: number;
+  elementValue;
+
+
+  @Input() appMask: string;
 
   constructor(
     private _elementRef: ElementRef,
     private _renderer: Renderer2,
   ) { }
 
-  @Input() appMask: string;
 
+
+  public ngOnInit(): void {
+    this.elementValue = this._elementRef.nativeElement.value;
+  }
+
+
+
+  writeValue(value: any) {
+    if (value !== undefined) {
+    }
+  }
+
+  registerOnChange(fn) {
+    this.propagateChange = fn;
+  }
+  propagateChange = (_: any) => { };
+
+  registerOnTouched(fn: any): void { }
 
 
   @HostListener('keydown', ['$event'])
   onKeydown($event) {
+    const el = ($event.target as HTMLInputElement);
+    const cursorPosition = el.selectionStart;
+
     if (this.onDeleteOrBackSpacePressed($event)) {
-      const el = ($event.target as HTMLInputElement);
-      const cursorPosition = el.selectionStart;
-
-
-      console.log('delete: ', cursorPosition);
-
-
       this.isUserDeletingValue = true;
     }
   }
 
-  @HostListener('input', ['$event'])
-  onInput($event) {
-
-    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
-    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
-
-    const el: HTMLInputElement = ($event.target as HTMLInputElement);
-    const cursorPosition: number = el.selectionStart;
-
-    // console.log(el, cursorPosition);
-
-
-    let inputValueSplitedValue;
-
-    if (this.onArrowsPressed($event)) {
-      return;
-    }
-
-    if (this.isUserDeletingValue) {
-      inputValueSplitedValue = this.resetInputOnDeleting(inputValueSplited, maskSplited);
-      console.log(el.selectionStart, el.selectionEnd)
-    } else {
-      this.isUserDeletingValue = false;
-      inputValueSplitedValue = inputValueSplited;
-    }
-
-    if (this.inpuValueHasGreaterSizeThenMask(inputValueReplacedPattern, maskReplacedPattern)) {
-      el.value = this.removeLastNumber($event.target.value);
-      return;
-    }
-
-
-
-    el.value = this.apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask);
-    if (this.isUserDeletingValue) {
-      this.isUserDeletingValue = false;
-      el.selectionStart = el.selectionEnd = cursorPosition;
-    }
-
-  }
 
 
   apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask) {
     let indexOnMask = 0;
+
     const returValue = inputValueSplitedValue.map((inputGroup, index) => {
       indexOnMask += inputGroup.length;
+
       if (this.hasSameSize(inputGroup, maskSplited[index])) {
         inputGroup += mask.charAt(indexOnMask);
         indexOnMask++;
@@ -125,20 +104,6 @@ export class MaskDirective implements ControlValueAccessor {
     }
 
   }
-
-
-
-  writeValue(value: any): void {
-    console.log(value);
-  }
-
-  registerOnChange(fn) {
-    this.propagateChange = fn;
-  }
-  propagateChange = (_: any) => { };
-
-  registerOnTouched(fn: any): void { }
-
   // ([0-9]{3}).([0-9]{3}).([0-9]{3})-([0-9]{2})
 
 
@@ -153,23 +118,6 @@ export class MaskDirective implements ControlValueAccessor {
       return true;
     }
   }
-
-
-  printValues(mask,
-    maskSplited,
-    maskReplacedPattern,
-    inputValue,
-    inputValueSplited,
-    inputValueReplacedPattern) {
-
-    console.log('mask: ', mask);
-    console.log('maskSplited: ', maskSplited);
-    console.log('maskReplacedPattern: ', maskReplacedPattern);
-    console.log('inputValue: ', inputValue);
-    console.log('inputValueSplited: ', inputValueSplited);
-    console.log('inputValueReplacedPattern: ', inputValueReplacedPattern);
-  }
-
 
   setStringMaskValues(value) {
     return [
@@ -197,20 +145,11 @@ export class MaskDirective implements ControlValueAccessor {
     });
   }
 
-
-  /*   resetInputOnDeleting(inputValueSplited, maskSplited) {
-      return inputValueSplited.map((actualGroup, index, arr) => {
-        const nextGroup: string = inputValueSplited[index + 1];
-        if (nextGroup) {
-          while (maskSplited[index].length > actualGroup.length) {
-            actualGroup += arr[index + 1].charAt(0);
-            arr[index + 1] = arr[index + 1].substr(1);
-          }
-        }
-        return actualGroup;
-      });
-    }
-   */
+  resetInputOnGreaterInput(inputValueSplited, maskSplited) {
+    return inputValueSplited.map((actualGroup, index, arr) => {
+      return this.exchangeValuesForwardToBack(inputValueSplited, maskSplited, actualGroup, index, arr);
+    });
+  }
 
   inpuValueHasGreaterSizeThenMask(data1, data2) {
     return data1.length > data2.length;
@@ -249,11 +188,71 @@ export class MaskDirective implements ControlValueAccessor {
     return parseFloat(value1) > parseFloat(value2);
   }
 
-
-  parseInputToMaskPattern() {
-
+  exchangeValuesBackwardToFront(inputValueSplited, maskSplited, actualGroup, index, arr) {
+    const nextGroup: string = inputValueSplited[index + 1];
+    if (nextGroup) {
+      while (maskSplited[index].length < actualGroup.length) {
+        /*   actualGroup += arr[index + 1].charAt(0);
+          arr[index + 1] = arr[index + 1].substr(1); */
+      }
+    }
+    return actualGroup;
   }
 
+
+  checkInputValuesSize(inputValueSplited, maskSplited) {
+
+    return inputValueSplited.map((v, i, arr) => {
+
+      if (arr[i] && maskSplited[i] && arr[i].length > maskSplited[i].length) {
+        if (inputValueSplited[i + 1]) {
+          arr[i + 1] = v.substr(maskSplited[i].length) + arr[i + 1];
+        }
+        v = v.substr(0, maskSplited[i].length);
+      }
+      return v;
+    });
+  }
+
+  @HostListener('input', ['$event'])
+  onInput($event) {
+
+    const [mask, maskReplacedPattern, maskSplited] = this.setStringMaskValues(this.appMask);
+    const [inputValue, inputValueReplacedPattern, inputValueSplited] = this.setStringMaskValues($event.target.value);
+
+    const el: HTMLInputElement = ($event.target as HTMLInputElement);
+    const cursorPosition: number = el.selectionStart;
+
+    let inputValueSplitedValue;
+
+    if (this.onArrowsPressed($event)) {
+      return;
+    }
+
+    if (!/\d/.test(el.value.charAt(cursorPosition - 1))) {
+      el.value = (this.elementValue) ? this.elementValue : '';
+      return;
+    }
+
+    if (this.isUserDeletingValue) {
+      inputValueSplitedValue = this.resetInputOnDeleting(inputValueSplited, maskSplited);
+    } else {
+      inputValueSplitedValue = this.checkInputValuesSize(inputValueSplited, maskSplited);
+    }
+
+    el.value = this.apllyInputMaskValue(inputValueSplitedValue, maskSplited, mask);
+    this.elementValue = el.value;
+
+    if (this.isUserDeletingValue) {
+      this.isUserDeletingValue = false;
+    }
+
+    if (/\d/.test(el.value.charAt(cursorPosition))) {
+      el.selectionStart = el.selectionEnd = cursorPosition;
+    } else {
+      el.selectionStart = el.selectionEnd = cursorPosition + 1;
+    }
+  }
 
 
 }
