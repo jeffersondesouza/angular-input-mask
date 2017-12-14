@@ -203,11 +203,11 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     console.log(inputValueSplited)
 
     return inputValueSplited.map((v, i, arr) => {
-      if (arr[i + 1] && (arr[i].length < arr[i + 1].length || arr[i].length < maskSplited[i].length)) {
-        v += arr[i + 1].charAt(0);
-        arr[i + 1] = arr[i + 1].substr(1, arr[i + 1].length);
+      while (inputValueSplited[i + 1] && (inputValueSplited[i].length < inputValueSplited[i + 1].length || inputValueSplited[i].length < maskSplited[i].length)) {
+        inputValueSplited[i] += inputValueSplited[i + 1].charAt(0);
+        inputValueSplited[i + 1] = inputValueSplited[i + 1].substr(1, inputValueSplited[i + 1].length);
       }
-      return v;
+      return inputValueSplited[i];
     });
   }
 
