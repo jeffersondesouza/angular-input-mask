@@ -188,17 +188,6 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
     return parseFloat(value1) > parseFloat(value2);
   }
 
-  exchangeValuesBackwardToFront(inputValueSplited, maskSplited, actualGroup, index, arr) {
-    const nextGroup: string = inputValueSplited[index + 1];
-    if (nextGroup) {
-      while (maskSplited[index].length < actualGroup.length) {
-        /*   actualGroup += arr[index + 1].charAt(0);
-          arr[index + 1] = arr[index + 1].substr(1); */
-      }
-    }
-    return actualGroup;
-  }
-
 
   checkInputValuesSize(inputValueSplited, maskSplited) {
 
@@ -229,7 +218,7 @@ export class MaskDirective implements OnInit, ControlValueAccessor {
       return;
     }
 
-    if (!/\d/.test(el.value.charAt(cursorPosition - 1))) {
+    if (!this.isUserDeletingValue && !/\d/.test(el.value.charAt(cursorPosition - 1))) {
       el.value = (this.elementValue) ? this.elementValue : '';
       return;
     }
